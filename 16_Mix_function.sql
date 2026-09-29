@@ -298,4 +298,105 @@ select * from passengers;
 -- FIND PASSENGERS WHO HAVE MADE AT LEAST ONE BOOKINGS
 select passenger_name  from passengers
 where passenger_id in(select passenger_id from bookings);
+  
+  
+  
+  
+-- CATOGORIES PASSENGER BASED ON AGE 
+select
+passenger_name,
+age,
+case
+when age<25 then 'Young'
+when age between 25 and 35
+then 'Adult'
+else 'Senior'
+end as age_group
+from passengers; 
 
+-- CATEGORIES BOOKING BASED ON TICKET PRICE 
+select booking_id,ticket_price,
+case 
+when ticket_price<5000 then 'low'
+when ticket_price between 5000 and 100000 then 'Medium'
+else 'High'
+end as Price_categories from bookings; 
+
+
+-- DISPLAY BOOKING STATUS AS A READABLE CATEGORIES
+select booking_id,booking_status,
+case when booking_id ='Confirmed' then 'Successful'
+when booking_status ='Cancelled' then 'Cancelled'
+else 'Pending'
+end as booking_category from bookings; 
+
+
+-- CATEGORIES FLIGHT BASED ON STATUS 
+select flight_number,flight_status,
+case
+when flight_status ='completed' then 'Finished'
+when flight_status='Cancelled' then 'Not operated'
+else 'Upcoming'
+end as flight_categories from flights;
+
+
+-- CATEGORIES PASEENGERS ACCORDING TO TRAVEL CLASSES
+select booking_id,travel_class,
+case 
+when travel_class='Economy' then 'Standard'
+when travel_class='Business'then 'Premium'
+else 'Luxury'
+end as class_categories from bookings;
+
+-- CTE FUNCTION 
+
+-- FIND BOOKING ABOVE AVERAGE TICKET PRICE
+with avg_price as (select avg(ticket_price) as avg_price from bookings )
+select booking_id,ticket_price from bookings
+where ticket_price >(select avg_price from avg_price);   
+
+-- CALCULATE TOTAL REVENUE BY AIRLINE 
+WITH airline_revenue as ( select f.airline,sum(b.ticket_price) as total_revenue from flights f 
+join bookings b on f.flight_id=b.flight_id where b.booking_status ='Confirmed' group by f.airline)
+select * from airline_revenue;
+
+
+-- FIND AIRLINE HAVING REVENUE GREATER THAN 20000
+with airline_revenue as(select f.airline,sum(b.ticket_price) as total_revenue from flights f 
+join bookings b  on f.flight_id=b.flight_id where b.booking_status='Confirmed' group by f.airline )
+select * from airline_revenue where total_revenue>20000;  
+
+
+-- FIND TOTAL BOOKING FOR EACH TRAVEL CLASS 
+with class_booking as (select travel_class ,count(*) as total_bookings from bookings group by travel_class )
+select * from class_booking; 
+
+
+-- FIND PASSENGER WHO WPENTS MORE THAN 10000
+with passenger_spending as ( select p.passenger_id,p.passenger_name, sum(b.ticket_price)as total_spending from passengers p 
+join bookings b  on p.passenger_id=b.passenger_id
+where b.booking_status ='Confirmed' group by p.passenger_id,p.passenger_name)
+select * from passenger_spending where total_spending >10000;  
+
+--  WINDOW FUNCTION
+
+-- RANK BOOKING ACCORDING TO TICKET PRICE
+select booking_id, ticket_price,
+rank() over(order by ticket_price desc) as price_rank from bookings;
+
+
+-- ASSINGN UNIQUE ROW NUMBERS TO BOOKING BASED ON TICKET PRICE
+select booking_id, ticket_price,
+row_number() over ( order by ticket_price desc) as row_num from bookings;
+
+
+-- RANK PASSENGERS BASED ON THEIR TOTAL SPENDING 
+select p.passenger_name, sum(b.ticket_price) as total_spending ,
+rank() over (order by sum(b.ticket_price) desc) as spending_rank from passengers p 
+join  bookings b on p.passenger_id=b.passenger_id 
+where b.booking_status='Confirmed' group by p.passenger_id,p.passenger_name;
+
+-- CALCULATE RUNNING TOTAL OF TICKET REVENUE 
+select booking_id, booking_date,ticket_price, 
+sum(ticket_price ) over ( order by booking_date,booking_id ) as running_revenue from bookings 
+where booking_status ='Confirmed';
